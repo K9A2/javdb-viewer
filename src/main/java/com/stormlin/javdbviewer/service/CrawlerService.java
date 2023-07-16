@@ -1,5 +1,6 @@
 package com.stormlin.javdbviewer.service;
 
+import com.stormlin.javdbviewer.constant.StringConstant;
 import com.stormlin.javdbviewer.domain.Movie;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -16,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * @author lin-jinting
@@ -24,15 +24,8 @@ import java.util.regex.Pattern;
 @Component
 public class CrawlerService {
     private static final Logger LOGGER = LoggerFactory.getLogger(CrawlerService.class);
-    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-            "AppleWebKit/537.36 (KHTML, like Gecko) " + "Chrome/114.0.0.0 Safari/537.36";
 
     private static final int MAX_RETRIES = 3;
-
-    /**
-     * 用于提取评分和投票人数的正则表达式
-     */
-    private static final Pattern SCORE_PATTERN = Pattern.compile("\\d+(\\.\\d+)?");
 
     public void startCrawler() {
         LOGGER.info("crawler service in");
@@ -45,7 +38,7 @@ public class CrawlerService {
             // 自动跳转到下一页
             currentPage += 1;
             // 构造页面按类别索引页面的 url
-            String pageUrl = String.format("https://javdb.com/tags?c10=1&c11=2023&c5=18&c9=gt-120&page=%d", currentPage);
+            String pageUrl = String.format(StringConstant.TAG_PAGE_TEMPLATE, currentPage);
 
             // 拉取页面 html 文档
             Document document = null;
@@ -54,7 +47,10 @@ public class CrawlerService {
             LOGGER.info("fetching next page at url: {}", pageUrl);
             while (retryCount < MAX_RETRIES) {
                 try {
-                    document = Jsoup.connect(pageUrl).proxy("127.0.0.1", 4780).userAgent(USER_AGENT).get();
+                    document = Jsoup.connect(pageUrl)
+                                    .proxy("127.0.0.1", 4780)
+                                    .userAgent(StringConstant.USER_AGENT)
+                                    .get();
 
                 } catch (IOException e) {
                     LOGGER.warn("error in fetching url: {}", pageUrl);
@@ -68,7 +64,7 @@ public class CrawlerService {
             }
             if (document == null) {
                 // 重试三次都失败，放弃该页面
-                LOGGER.warn("can not get url: https://javdb.com/tags?c5=18&c10=1&c11=2023&page=1");
+                LOGGER.warn("can not get url: {}", pageUrl);
                 break;
             }
 
@@ -86,7 +82,7 @@ public class CrawlerService {
                 // 提取评分和投票人数
                 Elements scoreElement = item.select("div.score");
                 String scoreString = scoreElement.get(0).text();
-                Matcher m = SCORE_PATTERN.matcher(scoreString);
+                Matcher m = StringConstant.SCORE_PATTERN.matcher(scoreString);
                 List<String> found = new ArrayList<>();
                 while (m.find()) {
                     found.add(m.group());
@@ -135,11 +131,7 @@ public class CrawlerService {
 
         // 输出全部拉取到的内容
         LOGGER.info("fetched {} movies", resultMap.size());
-        resultMap.forEach((key, movie) -> {
-            LOGGER.info("id: {}, url: {}, title: {}, score: {}, count: {}, date: {}",
-                    movie.getId(), movie.getUrl(), movie.getTitle(), movie.getScore(), movie.getCount(), movie.getDate());
-        });
-
-
+        resultMap.forEach((key, movie) -> LOGGER.info("id: {}, url: {}, title: {}, score: {}, count: {}, date: {}",
+                movie.getId(), movie.getUrl(), movie.getTitle(), movie.getScore(), movie.getCount(), movie.getDate()));
     }
 }
