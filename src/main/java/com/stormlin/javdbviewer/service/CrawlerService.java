@@ -2,21 +2,18 @@ package com.stormlin.javdbviewer.service;
 
 import com.stormlin.javdbviewer.constant.StringConstant;
 import com.stormlin.javdbviewer.domain.Movie;
+import com.stormlin.javdbviewer.utils.ParsingUtil;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
 
 /**
  * @author lin-jinting
@@ -68,50 +65,19 @@ public class CrawlerService {
                 break;
             }
 
-            // 提取电影元素列表
-            List<Element> itemElements = document.select("div.item").stream().toList();
+            // 从标签页中提取电影列表
+            List<Movie> movies = ParsingUtil.parseTagPageResult(document);
+            // 判断是否有重复数据，如果有重复数据则意味着已经拉去了所有公开提供的数据，不需要再提取下一页
             boolean isDuplicated = false;
-            for (Element item : itemElements) {
-                // 提取 url 连接
-                Elements urlElement = item.select("a");
-                String url = urlElement.get(0).attr("href");
-                // 提取电影番号和标题
-                Elements titleElement = item.select("div.video-title");
-                String id = titleElement.get(0).select("strong").get(0).text();
-                String title = titleElement.get(0).childNodes().get(1).toString().trim();
-                // 提取评分和投票人数
-                Elements scoreElement = item.select("div.score");
-                String scoreString = scoreElement.get(0).text();
-                Matcher m = StringConstant.SCORE_PATTERN.matcher(scoreString);
-                List<String> found = new ArrayList<>();
-                while (m.find()) {
-                    found.add(m.group());
-                }
-                float score = Float.parseFloat(found.get(0));
-                int count = Integer.parseInt(found.get(1));
-                // 提取日期
-                Elements dateElement = item.select("div.meta");
-                String dateString = dateElement.get(0).text();
-
-                // 构造结构体
-                Movie movie = new Movie();
-                movie.setId(id);
-                movie.setUrl(url);
-                movie.setTitle(title);
-                movie.setScore(score);
-                movie.setCount(count);
-                movie.setDate(dateString);
-
-                // 判断是否有重复数据，如果有重复数据则意味着已经拉去了所有公开提供的数据
-                if (resultMap.containsKey(id)) {
+            for (Movie m : movies) {
+                String id = m.getId();
+                if (resultMap.containsKey(m.getId())) {
                     LOGGER.warn("try to add duplicate movie to result map: {}", id);
-                    // 重复数据不再添加，停止下一页采集任务
                     isDuplicated = true;
                 } else {
-                    resultMap.put(id, movie);
+                    resultMap.put(id, m);
                 }
             }
-
             if (isDuplicated) {
                 // 出现重复元素，应当停止提取下一页元素
                 LOGGER.warn("stop fetching next page due to duplicated movie");
