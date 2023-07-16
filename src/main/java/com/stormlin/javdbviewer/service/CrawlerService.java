@@ -70,12 +70,12 @@ public class CrawlerService {
             // 判断是否有重复数据，如果有重复数据则意味着已经拉去了所有公开提供的数据，不需要再提取下一页
             boolean isDuplicated = false;
             for (Movie m : movies) {
-                String id = m.getId();
-                if (resultMap.containsKey(m.getId())) {
-                    LOGGER.warn("try to add duplicate movie to result map: {}", id);
+                String code = m.getCode();
+                if (resultMap.containsKey(m.getCode())) {
+                    LOGGER.warn("try to add duplicate movie to result map: {}", code);
                     isDuplicated = true;
                 } else {
-                    resultMap.put(id, m);
+                    resultMap.put(code, m);
                 }
             }
             if (isDuplicated) {
@@ -97,7 +97,7 @@ public class CrawlerService {
 
         // 输出全部拉取到的内容
         LOGGER.info("fetched {} movies", resultMap.size());
-        resultMap.forEach((key, movie) -> LOGGER.info("id: {}, url: {}, title: {}, score: {}, count: {}, date: {}",
-                movie.getId(), movie.getUrl(), movie.getTitle(), movie.getScore(), movie.getCount(), movie.getDate()));
+        resultMap.forEach((key, movie) -> LOGGER.info("code: {}, url: {}, title: {}, score: {}, count: {}, date: {}",
+                movie.getCode(), movie.getUrl(), movie.getTitle(), movie.getScore(), movie.getCount(), movie.getDate()));
     }
 }

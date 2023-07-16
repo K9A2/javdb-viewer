@@ -7,7 +7,7 @@ import lombok.Data;
  */
 @Data
 public class Movie {
-    String id;
+    String code;
     String url;
     String title;
     float score;

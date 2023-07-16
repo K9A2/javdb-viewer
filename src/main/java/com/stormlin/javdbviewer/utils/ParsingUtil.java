@@ -42,7 +42,7 @@ public class ParsingUtil {
 
             // 构造结构体
             Movie movie = new Movie();
-            movie.setId(id);
+            movie.setCode(id);
             movie.setUrl(url);
             movie.setTitle(title);
             movie.setScore(score);
