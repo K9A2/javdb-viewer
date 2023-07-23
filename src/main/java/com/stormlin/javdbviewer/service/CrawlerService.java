@@ -3,13 +3,11 @@ package com.stormlin.javdbviewer.service;
 import com.stormlin.javdbviewer.constant.StringConstant;
 import com.stormlin.javdbviewer.domain.Movie;
 import com.stormlin.javdbviewer.utils.ParsingUtil;
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,8 +19,6 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class CrawlerService {
     private static final Logger LOGGER = LoggerFactory.getLogger(CrawlerService.class);
-
-    private static final int MAX_RETRIES = 3;
 
     public void startCrawler() {
         LOGGER.info("crawler service in");
@@ -38,31 +34,12 @@ public class CrawlerService {
             String pageUrl = String.format(StringConstant.TAG_PAGE_TEMPLATE, currentPage);
 
             // 拉取页面 html 文档
-            Document document = null;
-            // 重试三次后如果还是有问题就放弃这个连接，并在日志上输出错误信息
-            int retryCount = 0;
             LOGGER.info("fetching next page at url: {}", pageUrl);
-            while (retryCount < MAX_RETRIES) {
-                try {
-                    document = Jsoup.connect(pageUrl)
-                                    .proxy("127.0.0.1", 4780)
-                                    .userAgent(StringConstant.USER_AGENT)
-                                    .get();
-
-                } catch (IOException e) {
-                    LOGGER.warn("error in fetching url: {}", pageUrl);
-                    retryCount += 1;
-                    e.printStackTrace();
-                    // 在重试次数的限制内开始下一次拉取任务
-                    continue;
-                }
-                // 已经拉取到指定页面，进入分析分析阶段
-                break;
-            }
+            Document document = ParsingUtil.getDocument(pageUrl);
             if (document == null) {
-                // 重试三次都失败，放弃该页面
-                LOGGER.warn("can not get url: {}", pageUrl);
-                break;
+                // 无法获取到当前资源，重试三次后放弃
+                LOGGER.warn("error in fetching url: {}", pageUrl);
+                continue;
             }
 
             // 从标签页中提取电影列表
